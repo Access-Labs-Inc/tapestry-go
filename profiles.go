@@ -3,7 +3,6 @@ package tapestry
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 )
@@ -118,13 +117,6 @@ func (c *TapestryClient) GetProfileByID(id string) (*ProfileResponse, error) {
 
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %w", err)
-	}
-
-	fmt.Printf("Response body: %s\n", string(body))
-
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusNotFound {
 			return nil, nil // ok but not found
@@ -133,7 +125,7 @@ func (c *TapestryClient) GetProfileByID(id string) (*ProfileResponse, error) {
 	}
 
 	var profileResp ProfileResponse
-	if err := json.Unmarshal(body, &profileResp); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&profileResp); err != nil {
 		return nil, fmt.Errorf("error decoding response: %w", err)
 	}
 
