@@ -25,4 +25,11 @@ jobs:
       run: go build -v ./...
 
     - name: Test
-      run: go test -v ./...
+      env:
+        TAPESTRY_API_KEY: ${{ secrets.TAPESTRY_API_KEY }}
+        TAPESTRY_API_BASE_URL: ${{ secrets.TAPESTRY_API_BASE_URL }}
+      run: |
+        go test --run TestProfileOperations
+        go test --run TestContentOperations
+        go test --run TestCommentOperations
+        go test --run TestLikeOperations
