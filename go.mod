@@ -1,3 +1,3 @@
-module github.com/Access-Labs-Inc/accessprotocol.co/tapestry-bindings
+module github.com/Access-Labs-Inc/tapestry-go
 
 go 1.18
