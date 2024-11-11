@@ -8,36 +8,11 @@ Tapestry documentation: <https://docs.usetapestry.dev/documentation/what-is-tape
 
 Tapestry API reference: <https://tapestry.apidocumentation.com/reference>
 
-
 ## Completness
-- Profiles
-    - [x] Find or create a profile
-    - [ ] Get profiles
-    - [x] Get a profile by ID
-    - [x] Update a profile
-    - [x] get followers
-    - [x] get following
-    - [ ] Get a list of profiles in a user's network that also follow a given profile
-    - [ ] Get suggested profiles
 
-- Contents
-    - [x] Get contents
-    - [x] Find or create content
-    - [x] Get content by ID
-    - [x] Update content
-    - [x] Delete content
+All current endpoints are implemented.
 
-- Comments
-    - [x] Create a comment
-    - [x] Get comments
-    - [x] Update a comment
-    - [x] Delete a comment
-    - [x] Get a comment by ID
+API tests cover endpoints except for:
 
-- Likes
-    - [x] Create a like
-    - [x] Delete a like
-
-- Followers
-    - [x] Follow a profile
-    - [x] Unfollow a profile
+- `GET /api/v1/profiles/__ID__/following-who-follow`
+- `GET /api/v1/profiles/suggested/__ADDRESS__`

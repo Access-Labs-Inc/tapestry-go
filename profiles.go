@@ -60,6 +60,26 @@ type ProfileDetails struct {
 	Image     string `json:"image,omitempty"`
 }
 
+type GetFollowingWhoFollowResponse struct {
+	Profiles []ProfileDetails `json:"profiles"`
+}
+
+type SuggestedProfileValue struct {
+	Namespaces []struct {
+		Name         string `json:"name"`
+		ReadableName string `json:"readableName,omitempty"`
+		FaviconURL   string `json:"faviconURL,omitempty"`
+	} `json:"namespaces"`
+	Profile ProfileDetails `json:"profile"`
+	Wallet  struct {
+		Address string `json:"address"`
+	} `json:"wallet"`
+}
+
+type GetSuggestedProfilesResponse struct {
+	Profiles map[string]SuggestedProfileValue
+}
+
 func (c *TapestryClient) FindOrCreateProfile(params FindOrCreateProfileParameters) (*ProfileResponse, error) {
 	req := FindOrCreateProfileRequest{
 		FindOrCreateProfileParameters: params,
@@ -188,4 +208,48 @@ func (c *TapestryClient) GetFollowing(profileID string) (*GetFollowingResponse, 
 	}
 
 	return &followingResp, nil
+}
+
+func (c *TapestryClient) GetFollowingWhoFollow(profileID string, requestorID string) (*GetFollowingWhoFollowResponse, error) {
+	url := fmt.Sprintf("%s/profiles/%s/following-who-follow?apiKey=%s&requestorId=%s",
+		c.tapestryApiBaseUrl, profileID, c.apiKey, requestorID)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var followingWhoFollowResp GetFollowingWhoFollowResponse
+	if err := json.NewDecoder(resp.Body).Decode(&followingWhoFollowResp); err != nil {
+		return nil, fmt.Errorf("error decoding response: %w", err)
+	}
+
+	return &followingWhoFollowResp, nil
+}
+
+func (c *TapestryClient) GetSuggestedProfiles(address string, ownAppOnly bool) (*GetSuggestedProfilesResponse, error) {
+	url := fmt.Sprintf("%s/profiles/suggested/%s?apiKey=%s&ownAppOnly=%t",
+		c.tapestryApiBaseUrl, address, c.apiKey, ownAppOnly)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var rawResponse map[string]SuggestedProfileValue
+	if err := json.NewDecoder(resp.Body).Decode(&rawResponse); err != nil {
+		return nil, fmt.Errorf("error decoding response: %w", err)
+	}
+
+	return &GetSuggestedProfilesResponse{Profiles: rawResponse}, nil
 }

@@ -298,6 +298,15 @@ func TestLikeOperations(t *testing.T) {
 }
 
 func TestFollowerOperations(t *testing.T) {
+	// Create followee profile
+	followee, err := client.FindOrCreateProfile(tapestry.FindOrCreateProfileParameters{
+		WalletAddress: solana.NewWallet().PublicKey().String(),
+		Username:      "followee_" + time.Now().Format("20060102150405"),
+	})
+	if err != nil {
+		t.Fatalf("Failed to create followee: %v", err)
+	}
+
 	// Create two additional test profiles with random Solana addresses
 	follower1, err := client.FindOrCreateProfile(tapestry.FindOrCreateProfileParameters{
 		WalletAddress: solana.NewWallet().PublicKey().String(),
@@ -315,13 +324,13 @@ func TestFollowerOperations(t *testing.T) {
 		t.Fatalf("Failed to create follower2: %v", err)
 	}
 
-	// Add followers to test profile
-	err = client.AddFollower(follower1.Profile.ID, testProfile.Profile.ID)
+	// Add followers to followee profile
+	err = client.AddFollower(follower1.Profile.ID, followee.Profile.ID)
 	if err != nil {
 		t.Fatalf("Failed to add follower1: %v", err)
 	}
 
-	err = client.AddFollower(follower2.Profile.ID, testProfile.Profile.ID)
+	err = client.AddFollower(follower2.Profile.ID, followee.Profile.ID)
 	if err != nil {
 		t.Fatalf("Failed to add follower2: %v", err)
 	}
@@ -332,8 +341,8 @@ func TestFollowerOperations(t *testing.T) {
 		t.Fatalf("Failed to make follower1 follow follower2: %v", err)
 	}
 
-	// Verify followers of test profile
-	followers, err := client.GetFollowers(testProfile.Profile.ID)
+	// Verify followers of followee profile
+	followers, err := client.GetFollowers(followee.Profile.ID)
 	if err != nil {
 		t.Fatalf("GetFollowers failed: %v", err)
 	}
@@ -351,13 +360,13 @@ func TestFollowerOperations(t *testing.T) {
 	}
 
 	// Remove one follower and verify
-	err = client.RemoveFollower(follower1.Profile.ID, testProfile.Profile.ID)
+	err = client.RemoveFollower(follower1.Profile.ID, followee.Profile.ID)
 	if err != nil {
 		t.Fatalf("RemoveFollower failed: %v", err)
 	}
 
 	// Verify updated follower count
-	updatedFollowers, err := client.GetFollowers(testProfile.Profile.ID)
+	updatedFollowers, err := client.GetFollowers(followee.Profile.ID)
 	if err != nil {
 		t.Fatalf("GetFollowers after removal failed: %v", err)
 	}
@@ -373,4 +382,20 @@ func TestFollowerOperations(t *testing.T) {
 	if len(updatedFollowing.Profiles) != 1 {
 		t.Errorf("Expected follower1 to be following 1 profile after removal, got %d", len(updatedFollowing.Profiles))
 	}
+
+	// Test GetFollowingWhoFollow
+	_, err = client.GetFollowingWhoFollow(follower2.Profile.ID, follower1.Profile.ID)
+	if err != nil {
+		t.Fatalf("GetFollowingWhoFollow failed: %v", err)
+	}
+
+	// TODO: assert output
+
+	// Test GetSuggestedProfiles
+	_, err = client.GetSuggestedProfiles(follower1.WalletAddress, true)
+	if err != nil {
+		t.Fatalf("GetSuggestedProfiles failed: %v", err)
+	}
+
+	// TODO: assert output
 }
