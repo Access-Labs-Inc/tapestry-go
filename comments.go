@@ -48,7 +48,6 @@ type CommentData struct {
 
 type Comment struct {
 	Namespace string `json:"namespace"`
-	CreatedAt int64  `json:"created_at"`
 	Text      string `json:"text"`
 	ID        string `json:"id"`
 }
@@ -57,7 +56,6 @@ type Author struct {
 	Namespace string `json:"namespace"`
 	ID        string `json:"id"`
 	Username  string `json:"username"`
-	CreatedAt int64  `json:"created_at"`
 	Bio       string `json:"bio"`
 	Image     string `json:"image"`
 }
