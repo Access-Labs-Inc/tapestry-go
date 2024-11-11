@@ -48,6 +48,7 @@ type CommentData struct {
 
 type Comment struct {
 	Namespace string `json:"namespace"`
+	CreatedAt int64  `json:"created_at"`
 	Text      string `json:"text"`
 	ID        string `json:"id"`
 }
