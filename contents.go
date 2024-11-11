@@ -12,7 +12,7 @@ type ContentProperty struct {
 	Value string `json:"value"`
 }
 
-type CreateContentRequest struct {
+type FindOrCreateContentRequest struct {
 	ProfileID  string            `json:"profileId"`
 	ID         string            `json:"id,omitempty"`
 	Properties []ContentProperty `json:"properties"`
@@ -66,13 +66,13 @@ type SocialCounts struct {
 	CommentCount int `json:"commentCount"`
 }
 
-func (c *TapestryClient) FindOrCreateContent(profileId, id string, content []ContentProperty) (*CreateOrUpdateContentResponse, error) {
+func (c *TapestryClient) FindOrCreateContent(profileId, id string, properties []ContentProperty) (*CreateOrUpdateContentResponse, error) {
 	url := fmt.Sprintf("%s/contents/findOrCreate?apiKey=%s", c.tapestryApiBaseUrl, c.apiKey)
 
-	jsonBody, err := json.Marshal(CreateContentRequest{
+	jsonBody, err := json.Marshal(FindOrCreateContentRequest{
 		ProfileID:  profileId,
 		ID:         id,
-		Properties: content,
+		Properties: properties,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling request: %w", err)

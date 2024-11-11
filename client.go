@@ -3,19 +3,19 @@ package tapestry
 type TapestryClient struct {
 	tapestryApiBaseUrl string
 	apiKey             string
-	execution          TapestryExecutionType
+	execution          Execution
 	blockchain         string
 }
 
-type TapestryExecutionType string
+type Execution string
 
 const (
-	FastUnconfirmed TapestryExecutionType = "FAST_UNCONFIRMED"
-	QuickSignature  TapestryExecutionType = "QUICK_SIGNATURE"
-	ConfirmedParsed TapestryExecutionType = "CONFIRMED_AND_PARSED"
+	ExecutionFastUnconfirmed Execution = "FAST_UNCONFIRMED"
+	ExecutionQuickSignature  Execution = "QUICK_SIGNATURE"
+	ExecutionConfirmedParsed Execution = "CONFIRMED_AND_PARSED"
 )
 
-func NewTapestryClient(apiKey string, tapestryApiBaseUrl string, execution TapestryExecutionType, blockchain string) TapestryClient {
+func NewTapestryClient(apiKey string, tapestryApiBaseUrl string, execution Execution, blockchain string) TapestryClient {
 	return TapestryClient{
 		tapestryApiBaseUrl: tapestryApiBaseUrl,
 		apiKey:             apiKey,

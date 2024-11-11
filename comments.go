@@ -81,6 +81,9 @@ type UpdateCommentResponse struct {
 
 func (c *TapestryClient) CreateComment(options CreateCommentOptions) (*CreateCommentResponse, error) {
 	url := fmt.Sprintf("%s/comments?apiKey=%s", c.tapestryApiBaseUrl, c.apiKey)
+	if options.Properties == nil {
+		options.Properties = []CommentProperty{}
+	}
 	req := CreateCommentRequest{
 		CreateCommentOptions: options,
 		Execution:            string(c.execution),
