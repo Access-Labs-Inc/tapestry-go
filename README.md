@@ -1,5 +1,7 @@
 # Tapestry Bindings for Go
 
+[![API tests](https://github.com/Access-Labs-Inc/tapestry-go/actions/workflows/go.yml/badge.svg)](https://github.com/Access-Labs-Inc/tapestry-go/actions/workflows/go.yml)
+
 Bindings for the Tapestry API documented at <https://tapestry.apidocumentation.com/reference>
 
 ## Completness

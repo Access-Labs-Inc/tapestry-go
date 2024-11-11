@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 	client = &TapestryClient{
 		tapestryApiBaseUrl: baseURL,
 		apiKey:             apiKey,
-		execution:          ConfirmedParsed,
+		execution:          ExecutionConfirmedParsed,
 		blockchain:         "SOLANA",
 	}
 
