@@ -6,8 +6,6 @@ name: Go
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
 
@@ -34,3 +32,4 @@ jobs:
         go test --run TestContentOperations
         go test --run TestCommentOperations
         go test --run TestLikeOperations
+        go test --run TestFollowerOperations

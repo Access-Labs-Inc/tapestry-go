@@ -18,6 +18,7 @@ Tapestry API reference: <https://tapestry.apidocumentation.com/reference>
     - [x] get followers
     - [x] get following
     - [ ] Get a list of profiles in a user's network that also follow a given profile
+    - [ ] Get suggested profiles
 
 - Contents
     - [x] Get contents
