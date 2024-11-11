@@ -2,7 +2,12 @@
 
 [![API tests](https://github.com/Access-Labs-Inc/tapestry-go/actions/workflows/go.yml/badge.svg)](https://github.com/Access-Labs-Inc/tapestry-go/actions/workflows/go.yml)
 
-Bindings for the Tapestry API documented at <https://tapestry.apidocumentation.com/reference>
+Bindings for the Tapestry API.
+
+Tapestry documentation: <https://docs.usetapestry.dev/documentation/what-is-tapestry>
+
+Tapestry API reference: <https://tapestry.apidocumentation.com/reference>
+
 
 ## Completness
 - Profiles
@@ -10,8 +15,8 @@ Bindings for the Tapestry API documented at <https://tapestry.apidocumentation.c
     - [ ] Get profiles
     - [x] Get a profile by ID
     - [x] Update a profile
-    - [ ] get followers
-    - [ ] get following
+    - [x] get followers
+    - [x] get following
     - [ ] Get a list of profiles in a user's network that also follow a given profile
 
 - Contents
@@ -33,5 +38,5 @@ Bindings for the Tapestry API documented at <https://tapestry.apidocumentation.c
     - [x] Delete a like
 
 - Followers
-    - [ ] Follow a profile
-    - [ ] Unfollow a profile
+    - [x] Follow a profile
+    - [x] Unfollow a profile

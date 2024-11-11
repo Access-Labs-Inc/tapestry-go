@@ -1,15 +1,18 @@
-package tapestry
+package tests
 
 import (
 	"fmt"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/gagliardetto/solana-go"
+	"github.com/tapestry"
 )
 
 var (
-	client      *TapestryClient
-	testProfile *ProfileResponse
+	client      tapestry.TapestryClient
+	testProfile *tapestry.ProfileResponse
 )
 
 func TestMain(m *testing.M) {
@@ -19,15 +22,10 @@ func TestMain(m *testing.M) {
 		panic("TAPESTRY_API_KEY and TAPESTRY_API_BASE_URL must be set")
 	}
 
-	client = &TapestryClient{
-		tapestryApiBaseUrl: baseURL,
-		apiKey:             apiKey,
-		execution:          ExecutionConfirmedParsed,
-		blockchain:         "SOLANA",
-	}
+	client = tapestry.NewTapestryClient(apiKey, baseURL, tapestry.ExecutionConfirmedParsed, "SOLANA")
 
 	var err error
-	testProfile, err = client.FindOrCreateProfile(FindOrCreateProfileParameters{
+	testProfile, err = client.FindOrCreateProfile(tapestry.FindOrCreateProfileParameters{
 		WalletAddress: "97QsK6DFcUZFz8tkRTcYypysyWsrGuC5CcHJuZMWAQhH",
 		Username:      "test_user_20241108143421",
 		Bio:           "Test bio",
@@ -53,7 +51,7 @@ func TestProfileOperations(t *testing.T) {
 
 	// Test UpdateProfile
 	newUsername := "updated_user_" + time.Now().Format("20060102150405")
-	err = client.UpdateProfile(testProfile.Profile.ID, UpdateProfileParameters{
+	err = client.UpdateProfile(testProfile.Profile.ID, tapestry.UpdateProfileParameters{
 		Username: newUsername,
 		Bio:      "Updated bio",
 	})
@@ -73,7 +71,7 @@ func TestProfileOperations(t *testing.T) {
 
 func TestContentOperations(t *testing.T) {
 	// Test FindOrCreateContent
-	contentProps := []ContentProperty{
+	contentProps := []tapestry.ContentProperty{
 		{Key: "title", Value: "Test Content"},
 		{Key: "description", Value: "Test Description"},
 	}
@@ -93,7 +91,7 @@ func TestContentOperations(t *testing.T) {
 	}
 
 	// Test UpdateContent
-	updatedProps := []ContentProperty{
+	updatedProps := []tapestry.ContentProperty{
 		{Key: "title", Value: "Updated Title"},
 		{Key: "description", Value: "Updated Description"},
 	}
@@ -104,9 +102,9 @@ func TestContentOperations(t *testing.T) {
 
 	// Test GetContents
 	contents, err := client.GetContents(
-		WithProfileID(testProfile.Profile.ID),
-		WithPagination("1", "10"),
-		WithOrderBy("created_at", GetContentsSortDirectionDesc),
+		tapestry.WithProfileID(testProfile.Profile.ID),
+		tapestry.WithPagination("1", "10"),
+		tapestry.WithOrderBy("created_at", tapestry.GetContentsSortDirectionDesc),
 	)
 	if err != nil {
 		t.Fatalf("GetContents failed: %v", err)
@@ -124,7 +122,7 @@ func TestContentOperations(t *testing.T) {
 
 func TestCommentOperations(t *testing.T) {
 	// Create test content first
-	contentProps := []ContentProperty{
+	contentProps := []tapestry.ContentProperty{
 		{Key: "title", Value: "Test Content for Comments"},
 	}
 	randomContentId := "test_content_" + time.Now().Format("20060102150405")
@@ -144,11 +142,11 @@ func TestCommentOperations(t *testing.T) {
 	}
 
 	// Test CreateComment
-	comment, err := client.CreateComment(CreateCommentOptions{
+	comment, err := client.CreateComment(tapestry.CreateCommentOptions{
 		ContentID: content.Content.ID,
 		ProfileID: testProfile.Profile.ID,
 		Text:      "Test comment",
-		Properties: []CommentProperty{
+		Properties: []tapestry.CommentProperty{
 			{Key: "test", Value: "property"},
 		},
 	})
@@ -158,7 +156,7 @@ func TestCommentOperations(t *testing.T) {
 
 	// Test UpdateComment
 	newProperty := "new property"
-	_, err = client.UpdateComment(comment.Comment.ID, []CommentProperty{
+	_, err = client.UpdateComment(comment.Comment.ID, []tapestry.CommentProperty{
 		{Key: "test", Value: newProperty},
 	})
 	if err != nil {
@@ -219,7 +217,7 @@ func TestCommentOperations(t *testing.T) {
 	// }
 
 	// Test GetComments
-	comments, err := client.GetComments(GetCommentsOptions{
+	comments, err := client.GetComments(tapestry.GetCommentsOptions{
 		ContentID:           content.Content.ID,
 		RequestingProfileID: testProfile.Profile.ID,
 		Page:                1,
@@ -250,7 +248,7 @@ func TestCommentOperations(t *testing.T) {
 
 func TestLikeOperations(t *testing.T) {
 	// Create test content first
-	contentProps := []ContentProperty{
+	contentProps := []tapestry.ContentProperty{
 		{Key: "title", Value: "Test Content for Likes"},
 	}
 	randomContentId := "test_content_" + time.Now().Format("20060102150405")
@@ -299,28 +297,18 @@ func TestLikeOperations(t *testing.T) {
 	}
 }
 
-func generateSolanaAddress() string {
-	const charset = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-	const length = 32
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charset[time.Now().UnixNano()%int64(len(charset))]
-	}
-	return string(b)
-}
-
 func TestFollowerOperations(t *testing.T) {
 	// Create two additional test profiles with random Solana addresses
-	follower1, err := client.FindOrCreateProfile(FindOrCreateProfileParameters{
-		WalletAddress: generateSolanaAddress(),
+	follower1, err := client.FindOrCreateProfile(tapestry.FindOrCreateProfileParameters{
+		WalletAddress: solana.NewWallet().PublicKey().String(),
 		Username:      "follower1_" + time.Now().Format("20060102150405"),
 	})
 	if err != nil {
 		t.Fatalf("Failed to create follower1: %v", err)
 	}
 
-	follower2, err := client.FindOrCreateProfile(FindOrCreateProfileParameters{
-		WalletAddress: generateSolanaAddress(),
+	follower2, err := client.FindOrCreateProfile(tapestry.FindOrCreateProfileParameters{
+		WalletAddress: solana.NewWallet().PublicKey().String(),
 		Username:      "follower2_" + time.Now().Format("20060102150405"),
 	})
 	if err != nil {

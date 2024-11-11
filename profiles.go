@@ -44,6 +44,22 @@ type UpdateProfileRequest struct {
 	Execution string `json:"execution,omitempty"`
 }
 
+type GetFollowersResponse struct {
+	Profiles []ProfileDetails `json:"profiles"`
+}
+
+type GetFollowingResponse struct {
+	Profiles []ProfileDetails `json:"profiles"`
+}
+
+type ProfileDetails struct {
+	ID        string `json:"id"`
+	CreatedAt int64  `json:"created_at"`
+	Username  string `json:"username"`
+	Bio       string `json:"bio,omitempty"`
+	Image     string `json:"image,omitempty"`
+}
+
 func (c *TapestryClient) FindOrCreateProfile(params FindOrCreateProfileParameters) (*ProfileResponse, error) {
 	req := FindOrCreateProfileRequest{
 		FindOrCreateProfileParameters: params,
@@ -130,4 +146,46 @@ func (c *TapestryClient) GetProfileByID(id string) (*ProfileResponse, error) {
 	}
 
 	return &profileResp, nil
+}
+
+func (c *TapestryClient) GetFollowers(profileID string) (*GetFollowersResponse, error) {
+	url := fmt.Sprintf("%s/profiles/%s/followers?apiKey=%s", c.tapestryApiBaseUrl, profileID, c.apiKey)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var followersResp GetFollowersResponse
+	if err := json.NewDecoder(resp.Body).Decode(&followersResp); err != nil {
+		return nil, fmt.Errorf("error decoding response: %w", err)
+	}
+
+	return &followersResp, nil
+}
+
+func (c *TapestryClient) GetFollowing(profileID string) (*GetFollowingResponse, error) {
+	url := fmt.Sprintf("%s/profiles/%s/following?apiKey=%s", c.tapestryApiBaseUrl, profileID, c.apiKey)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var followingResp GetFollowingResponse
+	if err := json.NewDecoder(resp.Body).Decode(&followingResp); err != nil {
+		return nil, fmt.Errorf("error decoding response: %w", err)
+	}
+
+	return &followingResp, nil
 }

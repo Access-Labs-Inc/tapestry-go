@@ -29,6 +29,7 @@ jobs:
         TAPESTRY_API_KEY: ${{ secrets.TAPESTRY_API_KEY }}
         TAPESTRY_API_BASE_URL: ${{ secrets.TAPESTRY_API_BASE_URL }}
       run: |
+        cd tests
         go test --run TestProfileOperations
         go test --run TestContentOperations
         go test --run TestCommentOperations

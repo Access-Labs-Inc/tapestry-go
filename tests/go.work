@@ -1,0 +1,7 @@
+go 1.21
+
+use (
+    ../tests
+)
+
+replace github.com/tapestry => ../
