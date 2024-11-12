@@ -23,10 +23,11 @@ type UpdateContentRequest struct {
 }
 
 type Content struct {
-	Namespace   string `json:"namespace"`
-	ID          string `json:"id"`
-	Description string `json:"description"`
-	Title       string `json:"title"`
+	Namespace   string        `json:"namespace"`
+	ID          string        `json:"id"`
+	Description string        `json:"description"`
+	Title       string        `json:"title"`
+	CreatedAt   UnixTimestamp `json:"created_at"`
 }
 
 type CreateOrUpdateContentResponse struct{ Content }
@@ -36,10 +37,11 @@ type GetContentResponse struct {
 }
 
 type AuthorProfile struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-	Bio      string `json:"bio"`
-	Image    string `json:"image"`
+	ID        string        `json:"id"`
+	Username  string        `json:"username"`
+	Bio       string        `json:"bio"`
+	Image     string        `json:"image"`
+	CreatedAt UnixTimestamp `json:"created_at"`
 }
 
 type RequestingProfileSocialInfo struct {

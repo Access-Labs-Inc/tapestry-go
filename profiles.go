@@ -53,10 +53,11 @@ type GetFollowingResponse struct {
 }
 
 type ProfileDetails struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-	Bio      string `json:"bio,omitempty"`
-	Image    string `json:"image,omitempty"`
+	ID        string        `json:"id"`
+	Username  string        `json:"username"`
+	Bio       string        `json:"bio,omitempty"`
+	Image     string        `json:"image,omitempty"`
+	CreatedAt UnixTimestamp `json:"created_at"`
 }
 
 type GetFollowingWhoFollowResponse struct {
