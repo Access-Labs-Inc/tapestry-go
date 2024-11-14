@@ -1,6 +1,7 @@
 package tapestry
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -78,25 +79,31 @@ type UpdateCommentResponse struct {
 	Comment
 }
 
-func (c *TapestryClient) CreateComment(options CreateCommentOptions) (*CreateCommentResponse, error) {
-	url := fmt.Sprintf("%s/comments?apiKey=%s", c.tapestryApiBaseUrl, c.apiKey)
+func (c *TapestryClient) CreateComment(ctx context.Context, options CreateCommentOptions) (*CreateCommentResponse, error) {
+	uri := fmt.Sprintf("%s/comments?apiKey=%s", c.tapestryApiBaseUrl, c.apiKey)
 	if options.Properties == nil {
 		options.Properties = []CommentProperty{}
 	}
-	req := CreateCommentRequest{
+	reqData := CreateCommentRequest{
 		CreateCommentOptions: options,
 		Execution:            string(c.execution),
 	}
 	if options.CommentID != "" {
-		req.CommentID = options.CommentID
+		reqData.CommentID = options.CommentID
 	}
 
-	jsonBody, err := json.Marshal(req)
+	jsonBody, err := json.Marshal(reqData)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling request: %w", err)
 	}
 
-	resp, err := http.Post(url, "application/json", strings.NewReader(string(jsonBody)))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, strings.NewReader(string(jsonBody)))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
@@ -119,7 +126,7 @@ func (c *TapestryClient) CreateComment(options CreateCommentOptions) (*CreateCom
 	return &commentResp, nil
 }
 
-func (c *TapestryClient) GetComments(options GetCommentsOptions) (*GetCommentsResponse, error) {
+func (c *TapestryClient) GetComments(ctx context.Context, options GetCommentsOptions) (*GetCommentsResponse, error) {
 	baseURL := fmt.Sprintf("%s/comments?apiKey=%s", c.tapestryApiBaseUrl, c.apiKey)
 
 	params := url.Values{}
@@ -143,12 +150,17 @@ func (c *TapestryClient) GetComments(options GetCommentsOptions) (*GetCommentsRe
 		params.Add("pageSize", strconv.Itoa(options.PageSize))
 	}
 
-	url := baseURL
+	uri := baseURL
 	if len(params) > 0 {
-		url += "&" + params.Encode()
+		uri += "&" + params.Encode()
 	}
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
@@ -169,10 +181,15 @@ func (c *TapestryClient) GetComments(options GetCommentsOptions) (*GetCommentsRe
 	return &comments, nil
 }
 
-func (c *TapestryClient) GetCommentByID(commentID string, requestingProfileID string) (*GetCommentByIdResponse, error) {
-	url := fmt.Sprintf("%s/comments/%s?apiKey=%s", c.tapestryApiBaseUrl, commentID, c.apiKey)
+func (c *TapestryClient) GetCommentByID(ctx context.Context, commentID string, requestingProfileID string) (*GetCommentByIdResponse, error) {
+	uri := fmt.Sprintf("%s/comments/%s?apiKey=%s", c.tapestryApiBaseUrl, commentID, c.apiKey)
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
@@ -190,10 +207,10 @@ func (c *TapestryClient) GetCommentByID(commentID string, requestingProfileID st
 	return &commentResp, nil
 }
 
-func (c *TapestryClient) DeleteComment(commentID string) error {
-	url := fmt.Sprintf("%s/comments/%s?apiKey=%s", c.tapestryApiBaseUrl, commentID, c.apiKey)
+func (c *TapestryClient) DeleteComment(ctx context.Context, commentID string) error {
+	uri := fmt.Sprintf("%s/comments/%s?apiKey=%s", c.tapestryApiBaseUrl, commentID, c.apiKey)
 
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, uri, nil)
 	if err != nil {
 		return fmt.Errorf("error creating request: %w", err)
 	}
@@ -211,25 +228,25 @@ func (c *TapestryClient) DeleteComment(commentID string) error {
 	return nil
 }
 
-func (c *TapestryClient) UpdateComment(commentID string, properties []CommentProperty) (*UpdateCommentResponse, error) {
-	url := fmt.Sprintf("%s/comments/%s?apiKey=%s", c.tapestryApiBaseUrl, commentID, c.apiKey)
+func (c *TapestryClient) UpdateComment(ctx context.Context, commentID string, properties []CommentProperty) (*UpdateCommentResponse, error) {
+	uri := fmt.Sprintf("%s/comments/%s?apiKey=%s", c.tapestryApiBaseUrl, commentID, c.apiKey)
 
-	req := UpdateCommentRequest{
+	reqData := UpdateCommentRequest{
 		Properties: properties,
 	}
 
-	jsonBody, err := json.Marshal(req)
+	jsonBody, err := json.Marshal(reqData)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling request: %w", err)
 	}
 
-	httpReq, err := http.NewRequest(http.MethodPut, url, strings.NewReader(string(jsonBody)))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uri, strings.NewReader(string(jsonBody)))
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
-	httpReq.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
