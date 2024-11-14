@@ -1,6 +1,7 @@
 package tapestry
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -66,7 +67,7 @@ type SocialCounts struct {
 	CommentCount int `json:"commentCount"`
 }
 
-func (c *TapestryClient) FindOrCreateContent(profileId, id string, properties []ContentProperty) (*CreateOrUpdateContentResponse, error) {
+func (c *TapestryClient) FindOrCreateContent(ctx context.Context, profileId, id string, properties []ContentProperty) (*CreateOrUpdateContentResponse, error) {
 	url := fmt.Sprintf("%s/contents/findOrCreate?apiKey=%s", c.tapestryApiBaseUrl, c.apiKey)
 
 	jsonBody, err := json.Marshal(FindOrCreateContentRequest{
@@ -78,7 +79,13 @@ func (c *TapestryClient) FindOrCreateContent(profileId, id string, properties []
 		return nil, fmt.Errorf("error marshaling request: %w", err)
 	}
 
-	resp, err := http.Post(url, "application/json", strings.NewReader(string(jsonBody)))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(string(jsonBody)))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
@@ -96,7 +103,7 @@ func (c *TapestryClient) FindOrCreateContent(profileId, id string, properties []
 	return &contentResp, nil
 }
 
-func (c *TapestryClient) UpdateContent(contentId string, properties []ContentProperty) (*CreateOrUpdateContentResponse, error) {
+func (c *TapestryClient) UpdateContent(ctx context.Context, contentId string, properties []ContentProperty) (*CreateOrUpdateContentResponse, error) {
 	url := fmt.Sprintf("%s/contents/%s?apiKey=%s", c.tapestryApiBaseUrl, contentId, c.apiKey)
 
 	jsonBody, err := json.Marshal(UpdateContentRequest{
@@ -106,13 +113,13 @@ func (c *TapestryClient) UpdateContent(contentId string, properties []ContentPro
 		return nil, fmt.Errorf("error marshaling request: %w", err)
 	}
 
-	httpReq, err := http.NewRequest(http.MethodPut, url, strings.NewReader(string(jsonBody)))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, strings.NewReader(string(jsonBody)))
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
-	httpReq.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
@@ -130,15 +137,15 @@ func (c *TapestryClient) UpdateContent(contentId string, properties []ContentPro
 	return &contentResp, nil
 }
 
-func (c *TapestryClient) DeleteContent(contentId string) error {
+func (c *TapestryClient) DeleteContent(ctx context.Context, contentId string) error {
 	url := fmt.Sprintf("%s/contents/%s?apiKey=%s", c.tapestryApiBaseUrl, contentId, c.apiKey)
 
-	httpReq, err := http.NewRequest(http.MethodDelete, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return fmt.Errorf("error creating request: %w", err)
 	}
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("error making request: %w", err)
 	}
@@ -151,10 +158,15 @@ func (c *TapestryClient) DeleteContent(contentId string) error {
 	return nil
 }
 
-func (c *TapestryClient) GetContentByID(contentId string) (*GetContentResponse, error) {
+func (c *TapestryClient) GetContentByID(ctx context.Context, contentId string) (*GetContentResponse, error) {
 	url := fmt.Sprintf("%s/contents/%s?apiKey=%s", c.tapestryApiBaseUrl, contentId, c.apiKey)
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
@@ -182,7 +194,7 @@ func (c *TapestryClient) GetContentByID(contentId string) (*GetContentResponse, 
 	return &contentResp, nil
 }
 
-func (c *TapestryClient) GetContents(opts ...GetContentsOption) (*GetContentsResponse, error) {
+func (c *TapestryClient) GetContents(ctx context.Context, opts ...GetContentsOption) (*GetContentsResponse, error) {
 	params := &getContentsParams{
 		apiKey: c.apiKey,
 	}
@@ -193,7 +205,12 @@ func (c *TapestryClient) GetContents(opts ...GetContentsOption) (*GetContentsRes
 
 	url := fmt.Sprintf("%s/contents/?%s", c.tapestryApiBaseUrl, params.encode())
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}

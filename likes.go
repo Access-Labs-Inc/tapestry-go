@@ -2,6 +2,7 @@ package tapestry
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -16,15 +17,21 @@ type DeleteLikeRequest struct {
 	StartId string `json:"startId"`
 }
 
-func (c *TapestryClient) CreateLike(contentID string, profile Profile) error {
-	url := fmt.Sprintf("%s/likes/%s?apiKey=%s&username=%s", c.tapestryApiBaseUrl, contentID, c.apiKey, url.QueryEscape(profile.Username))
+func (c *TapestryClient) CreateLike(ctx context.Context, contentID string, profile Profile) error {
+	uri := fmt.Sprintf("%s/likes/%s?apiKey=%s&username=%s", c.tapestryApiBaseUrl, contentID, c.apiKey, url.QueryEscape(profile.Username))
 
 	reqBody, err := json.Marshal(CreateLikeRequest{StartId: profile.ID, Execution: "FAST_UNCONFIRMED"})
 	if err != nil {
 		return fmt.Errorf("error encoding body: %w", err)
 	}
 
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, bytes.NewBuffer(reqBody))
+	if err != nil {
+		return fmt.Errorf("error creating request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("error making request: %w", err)
 	}
@@ -37,15 +44,15 @@ func (c *TapestryClient) CreateLike(contentID string, profile Profile) error {
 	return nil
 }
 
-func (c *TapestryClient) DeleteLike(contentID string, profile Profile) error {
-	url := fmt.Sprintf("%s/likes/%s?apiKey=%s&username=%s", c.tapestryApiBaseUrl, contentID, c.apiKey, url.QueryEscape(profile.Username))
+func (c *TapestryClient) DeleteLike(ctx context.Context, contentID string, profile Profile) error {
+	uri := fmt.Sprintf("%s/likes/%s?apiKey=%s&username=%s", c.tapestryApiBaseUrl, contentID, c.apiKey, url.QueryEscape(profile.Username))
 
 	reqBody, err := json.Marshal(DeleteLikeRequest{StartId: profile.ID})
 	if err != nil {
 		return fmt.Errorf("error encoding body: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodDelete, url, bytes.NewBuffer(reqBody))
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, uri, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return fmt.Errorf("error creating request: %w", err)
 	}
