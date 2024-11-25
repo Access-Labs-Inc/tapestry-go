@@ -1,6 +1,7 @@
 package tapestry
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -80,8 +81,8 @@ type GetSuggestedProfilesResponse struct {
 	Profiles map[string]SuggestedProfileValue
 }
 
-func (c *TapestryClient) FindOrCreateProfile(params FindOrCreateProfileParameters) (*ProfileResponse, error) {
-	req := FindOrCreateProfileRequest{
+func (c *TapestryClient) FindOrCreateProfile(ctx context.Context, params FindOrCreateProfileParameters) (*ProfileResponse, error) {
+	reqData := FindOrCreateProfileRequest{
 		FindOrCreateProfileParameters: params,
 		Execution:                     string(c.execution),
 		Blockchain:                    c.blockchain,
@@ -89,12 +90,18 @@ func (c *TapestryClient) FindOrCreateProfile(params FindOrCreateProfileParameter
 
 	url := fmt.Sprintf("%s/profiles/findOrCreate?apiKey=%s", c.tapestryApiBaseUrl, c.apiKey)
 
-	jsonBody, err := json.Marshal(req)
+	jsonBody, err := json.Marshal(reqData)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling request: %w", err)
 	}
 
-	resp, err := http.Post(url, "application/json", strings.NewReader(string(jsonBody)))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(string(jsonBody)))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
@@ -113,24 +120,24 @@ func (c *TapestryClient) FindOrCreateProfile(params FindOrCreateProfileParameter
 	return &profileResp, nil
 }
 
-func (c *TapestryClient) UpdateProfile(id string, req UpdateProfileParameters) error {
+func (c *TapestryClient) UpdateProfile(ctx context.Context, id string, reqData UpdateProfileParameters) error {
 	url := fmt.Sprintf("%s/profiles/%s?apiKey=%s", c.tapestryApiBaseUrl, id, c.apiKey)
 
 	jsonBody, err := json.Marshal(UpdateProfileRequest{
-		UpdateProfileParameters: req,
+		UpdateProfileParameters: reqData,
 		Execution:               string(c.execution),
 	})
 	if err != nil {
 		return fmt.Errorf("error marshaling request: %w", err)
 	}
 
-	httpReq, err := http.NewRequest(http.MethodPut, url, strings.NewReader(string(jsonBody)))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, strings.NewReader(string(jsonBody)))
 	if err != nil {
 		return fmt.Errorf("error creating request: %w", err)
 	}
-	httpReq.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("error making request: %w", err)
 	}
@@ -143,10 +150,15 @@ func (c *TapestryClient) UpdateProfile(id string, req UpdateProfileParameters) e
 	return nil
 }
 
-func (c *TapestryClient) GetProfileByID(id string) (*ProfileResponse, error) {
+func (c *TapestryClient) GetProfileByID(ctx context.Context, id string) (*ProfileResponse, error) {
 	url := fmt.Sprintf("%s/profiles/%s?apiKey=%s", c.tapestryApiBaseUrl, id, c.apiKey)
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
@@ -168,10 +180,15 @@ func (c *TapestryClient) GetProfileByID(id string) (*ProfileResponse, error) {
 	return &profileResp, nil
 }
 
-func (c *TapestryClient) GetFollowers(profileID string) (*GetFollowersResponse, error) {
+func (c *TapestryClient) GetFollowers(ctx context.Context, profileID string) (*GetFollowersResponse, error) {
 	url := fmt.Sprintf("%s/profiles/%s/followers?apiKey=%s", c.tapestryApiBaseUrl, profileID, c.apiKey)
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
@@ -189,10 +206,15 @@ func (c *TapestryClient) GetFollowers(profileID string) (*GetFollowersResponse, 
 	return &followersResp, nil
 }
 
-func (c *TapestryClient) GetFollowing(profileID string) (*GetFollowingResponse, error) {
+func (c *TapestryClient) GetFollowing(ctx context.Context, profileID string) (*GetFollowingResponse, error) {
 	url := fmt.Sprintf("%s/profiles/%s/following?apiKey=%s", c.tapestryApiBaseUrl, profileID, c.apiKey)
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
@@ -210,11 +232,16 @@ func (c *TapestryClient) GetFollowing(profileID string) (*GetFollowingResponse, 
 	return &followingResp, nil
 }
 
-func (c *TapestryClient) GetFollowingWhoFollow(profileID string, requestorID string) (*GetFollowingWhoFollowResponse, error) {
+func (c *TapestryClient) GetFollowingWhoFollow(ctx context.Context, profileID string, requestorID string) (*GetFollowingWhoFollowResponse, error) {
 	url := fmt.Sprintf("%s/profiles/%s/following-who-follow?apiKey=%s&requestorId=%s",
 		c.tapestryApiBaseUrl, profileID, c.apiKey, requestorID)
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
@@ -232,11 +259,16 @@ func (c *TapestryClient) GetFollowingWhoFollow(profileID string, requestorID str
 	return &followingWhoFollowResp, nil
 }
 
-func (c *TapestryClient) GetSuggestedProfiles(address string, ownAppOnly bool) (*GetSuggestedProfilesResponse, error) {
+func (c *TapestryClient) GetSuggestedProfiles(ctx context.Context, address string, ownAppOnly bool) (*GetSuggestedProfilesResponse, error) {
 	url := fmt.Sprintf("%s/profiles/suggested/%s?apiKey=%s&ownAppOnly=%t",
 		c.tapestryApiBaseUrl, address, c.apiKey, ownAppOnly)
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
