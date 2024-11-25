@@ -118,6 +118,46 @@ func TestContentOperations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DeleteContent failed: %v", err)
 	}
+
+	// Test batch content creation
+	var contentIDs []string
+	for i := 0; i < 3; i++ {
+		randomContentId := fmt.Sprintf("test_content_batch_%d_%s", i, time.Now().Format("20060102150405"))
+		contentIDs = append(contentIDs, randomContentId)
+
+		contentProps := []tapestry.ContentProperty{
+			{Key: "title", Value: fmt.Sprintf("Test Content %d", i)},
+			{Key: "description", Value: fmt.Sprintf("Test Description %d", i)},
+		}
+
+		_, err := client.FindOrCreateContent(testProfile.Profile.ID, randomContentId, contentProps)
+		if err != nil {
+			t.Fatalf("Failed to create test content %d: %v", i, err)
+		}
+	}
+
+	// Test GetContentsByBatchIDs
+	batchResponse, err := client.GetContentsByBatchIDs(contentIDs)
+	if err != nil {
+		t.Fatalf("GetContentsByBatchIDs failed: %v", err)
+	}
+
+	if len(batchResponse.Successful) != len(contentIDs) {
+		t.Errorf("Expected %d successful contents, got %d", len(contentIDs), len(batchResponse.Successful))
+	}
+
+	// log all batch contents
+	for _, content := range batchResponse.Successful {
+		fmt.Println(content)
+	}
+
+	// Cleanup batch contents
+	for _, contentID := range contentIDs {
+		err = client.DeleteContent(contentID)
+		if err != nil {
+			t.Fatalf("Failed to delete test content %s: %v", contentID, err)
+		}
+	}
 }
 
 func TestCommentOperations(t *testing.T) {
