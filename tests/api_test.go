@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -25,7 +26,7 @@ func TestMain(m *testing.M) {
 	client = tapestry.NewTapestryClient(apiKey, baseURL, tapestry.ExecutionConfirmedParsed, "SOLANA")
 
 	var err error
-	testProfile, err = client.FindOrCreateProfile(tapestry.FindOrCreateProfileParameters{
+	testProfile, err = client.FindOrCreateProfile(context.Background(), tapestry.FindOrCreateProfileParameters{
 		WalletAddress: "97QsK6DFcUZFz8tkRTcYypysyWsrGuC5CcHJuZMWAQhH",
 		Username:      "test_user_20241108143421",
 		Bio:           "Test bio",
@@ -40,7 +41,7 @@ func TestMain(m *testing.M) {
 
 func TestProfileOperations(t *testing.T) {
 	// Test GetProfileByID
-	profile, err := client.GetProfileByID(testProfile.Profile.ID)
+	profile, err := client.GetProfileByID(context.Background(), testProfile.Profile.ID)
 
 	if err != nil {
 		t.Fatalf("GetProfileByID failed: %v", err)
@@ -51,7 +52,7 @@ func TestProfileOperations(t *testing.T) {
 
 	// Test UpdateProfile
 	newUsername := "updated_user_" + time.Now().Format("20060102150405")
-	err = client.UpdateProfile(testProfile.Profile.ID, tapestry.UpdateProfileParameters{
+	err = client.UpdateProfile(context.Background(), testProfile.Profile.ID, tapestry.UpdateProfileParameters{
 		Username: newUsername,
 		Bio:      "Updated bio",
 	})
@@ -70,19 +71,21 @@ func TestProfileOperations(t *testing.T) {
 }
 
 func TestContentOperations(t *testing.T) {
+	ctx := context.Background()
+
 	// Test FindOrCreateContent
 	contentProps := []tapestry.ContentProperty{
 		{Key: "title", Value: "Test Content"},
 		{Key: "description", Value: "Test Description"},
 	}
 	randomContentId := "test_content_" + time.Now().Format("20060102150405")
-	content, err := client.FindOrCreateContent(testProfile.Profile.ID, randomContentId, contentProps)
+	content, err := client.FindOrCreateContent(ctx, testProfile.Profile.ID, randomContentId, contentProps)
 	if err != nil {
 		t.Fatalf("FindOrCreateContent failed: %v", err)
 	}
 
 	// Test GetContentByID
-	retrievedContent, err := client.GetContentByID(randomContentId)
+	retrievedContent, err := client.GetContentByID(ctx, randomContentId)
 	if err != nil {
 		t.Fatalf("GetContentByID failed: %v", err)
 	}
@@ -95,13 +98,14 @@ func TestContentOperations(t *testing.T) {
 		{Key: "title", Value: "Updated Title"},
 		{Key: "description", Value: "Updated Description"},
 	}
-	_, err = client.UpdateContent(randomContentId, updatedProps)
+	_, err = client.UpdateContent(ctx, randomContentId, updatedProps)
 	if err != nil {
 		t.Fatalf("UpdateContent failed: %v", err)
 	}
 
 	// Test GetContents
 	contents, err := client.GetContents(
+		ctx,
 		tapestry.WithProfileID(testProfile.Profile.ID),
 		tapestry.WithPagination("1", "10"),
 		tapestry.WithOrderBy("created_at", tapestry.GetContentsSortDirectionDesc),
@@ -114,26 +118,63 @@ func TestContentOperations(t *testing.T) {
 	}
 
 	// Test DeleteContent
-	err = client.DeleteContent(randomContentId)
+	err = client.DeleteContent(ctx, randomContentId)
 	if err != nil {
 		t.Fatalf("DeleteContent failed: %v", err)
+	}
+
+	// Test batch content creation
+	var contentIDs []string
+	for i := 0; i < 3; i++ {
+		randomContentId := fmt.Sprintf("test_content_batch_%d_%s", i, time.Now().Format("20060102150405"))
+		contentIDs = append(contentIDs, randomContentId)
+
+		contentProps := []tapestry.ContentProperty{
+			{Key: "title", Value: fmt.Sprintf("Test Content %d", i)},
+			{Key: "description", Value: fmt.Sprintf("Test Description %d", i)},
+		}
+
+		_, err := client.FindOrCreateContent(ctx, testProfile.Profile.ID, randomContentId, contentProps)
+		if err != nil {
+			t.Fatalf("Failed to create test content %d: %v", i, err)
+		}
+	}
+
+	// Test GetContentsByBatchIDs
+	batchResponse, err := client.GetContentsByBatchIDs(ctx, contentIDs)
+	if err != nil {
+		t.Fatalf("GetContentsByBatchIDs failed: %v", err)
+	}
+
+	if len(batchResponse.Successful) != len(contentIDs) {
+		t.Errorf("Expected %d successful contents, got %d", len(contentIDs), len(batchResponse.Successful))
+	}
+
+	// Cleanup batch contents
+	for _, contentID := range contentIDs {
+		err = client.DeleteContent(ctx, contentID)
+		if err != nil {
+			t.Fatalf("Failed to delete test content %s: %v", contentID, err)
+		}
 	}
 }
 
 func TestCommentOperations(t *testing.T) {
+	ctx := context.Background()
+
 	// Create test content first
 	contentProps := []tapestry.ContentProperty{
 		{Key: "title", Value: "Test Content for Comments"},
 	}
 	randomContentId := "test_content_" + time.Now().Format("20060102150405")
 	fmt.Println("profile id", testProfile.Profile.ID)
-	content, err := client.FindOrCreateContent(testProfile.Profile.ID, randomContentId, contentProps)
+	content, err := client.FindOrCreateContent(ctx, testProfile.Profile.ID, randomContentId, contentProps)
 	if err != nil {
 		t.Fatalf("Failed to create test content: %v", err)
 	}
 
 	// Verify initial comment count is 0
-	initialContent, err := client.GetContentByID(content.Content.ID)
+	initialContent, err := client.GetContentByID(ctx, content.Content.ID)
 	if err != nil {
 		t.Fatalf("GetContentByID failed: %v", err)
 	}
@@ -142,7 +183,7 @@ func TestCommentOperations(t *testing.T) {
 	}
 
 	// Test CreateComment
-	comment, err := client.CreateComment(tapestry.CreateCommentOptions{
+	comment, err := client.CreateComment(ctx, tapestry.CreateCommentOptions{
 		ContentID: content.Content.ID,
 		ProfileID: testProfile.Profile.ID,
 		Text:      "Test comment",
@@ -156,14 +197,14 @@ func TestCommentOperations(t *testing.T) {
 
 	// Test UpdateComment
 	newProperty := "new property"
-	_, err = client.UpdateComment(comment.Comment.ID, []tapestry.CommentProperty{
+	_, err = client.UpdateComment(ctx, comment.Comment.ID, []tapestry.CommentProperty{
 		{Key: "test", Value: newProperty},
 	})
 	if err != nil {
 		t.Fatalf("UpdateComment failed: %v", err)
 	}
 	// Verify comment count increased to 1
-	contentAfterComment, err := client.GetContentByID(content.Content.ID)
+	contentAfterComment, err := client.GetContentByID(ctx, content.Content.ID)
 	if err != nil {
 		t.Fatalf("GetContentByID failed: %v", err)
 	}
@@ -172,7 +213,7 @@ func TestCommentOperations(t *testing.T) {
 	}
 
 	// Test GetCommentByID - verify initial like count
-	commentDetail, err := client.GetCommentByID(comment.Comment.ID, testProfile.Profile.ID)
+	commentDetail, err := client.GetCommentByID(ctx, comment.Comment.ID, testProfile.Profile.ID)
 	if err != nil {
 		t.Fatalf("GetCommentByID failed: %v", err)
 	}
@@ -181,13 +222,13 @@ func TestCommentOperations(t *testing.T) {
 	}
 
 	// Test liking the comment
-	err = client.CreateLike(comment.Comment.ID, testProfile.Profile)
+	err = client.CreateLike(ctx, comment.Comment.ID, testProfile.Profile)
 	if err != nil {
 		t.Fatalf("CreateLike on comment failed: %v", err)
 	}
 
 	// Verify like count increased to 1
-	commentAfterLike, err := client.GetCommentByID(comment.Comment.ID, testProfile.Profile.ID)
+	commentAfterLike, err := client.GetCommentByID(ctx, comment.Comment.ID, testProfile.Profile.ID)
 	if err != nil {
 		t.Fatalf("GetCommentByID after like failed: %v", err)
 	}
@@ -199,13 +240,13 @@ func TestCommentOperations(t *testing.T) {
 	// }
 
 	// Test unliking the comment
-	err = client.DeleteLike(comment.Comment.ID, testProfile.Profile)
+	err = client.DeleteLike(ctx, comment.Comment.ID, testProfile.Profile)
 	if err != nil {
 		t.Fatalf("DeleteLike on comment failed: %v", err)
 	}
 
 	// Verify like count back to 0
-	commentAfterUnlike, err := client.GetCommentByID(comment.Comment.ID, testProfile.Profile.ID)
+	commentAfterUnlike, err := client.GetCommentByID(ctx, comment.Comment.ID, testProfile.Profile.ID)
 	if err != nil {
 		t.Fatalf("GetCommentByID after unlike failed: %v", err)
 	}
@@ -217,7 +258,7 @@ func TestCommentOperations(t *testing.T) {
 	// }
 
 	// Test GetComments
-	comments, err := client.GetComments(tapestry.GetCommentsOptions{
+	comments, err := client.GetComments(ctx, tapestry.GetCommentsOptions{
 		ContentID:           content.Content.ID,
 		RequestingProfileID: testProfile.Profile.ID,
 		Page:                1,
@@ -231,13 +272,13 @@ func TestCommentOperations(t *testing.T) {
 	}
 
 	// Test DeleteComment
-	err = client.DeleteComment(comment.Comment.ID)
+	err = client.DeleteComment(ctx, comment.Comment.ID)
 	if err != nil {
 		t.Fatalf("DeleteComment failed: %v", err)
 	}
 
 	// Verify comment count back to 0
-	contentAfterDelete, err := client.GetContentByID(content.Content.ID)
+	contentAfterDelete, err := client.GetContentByID(ctx, content.Content.ID)
 	if err != nil {
 		t.Fatalf("GetContentByID failed: %v", err)
 	}
@@ -247,18 +288,20 @@ func TestCommentOperations(t *testing.T) {
 }
 
 func TestLikeOperations(t *testing.T) {
+	ctx := context.Background()
+
 	// Create test content first
 	contentProps := []tapestry.ContentProperty{
 		{Key: "title", Value: "Test Content for Likes"},
 	}
 	randomContentId := "test_content_" + time.Now().Format("20060102150405")
-	content, err := client.FindOrCreateContent(testProfile.Profile.ID, randomContentId, contentProps)
+	content, err := client.FindOrCreateContent(ctx, testProfile.Profile.ID, randomContentId, contentProps)
 	if err != nil {
 		t.Fatalf("Failed to create test content: %v", err)
 	}
 
 	// Verify initial like count is 0
-	initialContent, err := client.GetContentByID(content.Content.ID)
+	initialContent, err := client.GetContentByID(ctx, content.Content.ID)
 	if err != nil {
 		t.Fatalf("GetContentByID failed: %v", err)
 	}
@@ -267,13 +310,13 @@ func TestLikeOperations(t *testing.T) {
 	}
 
 	// Test CreateLike
-	err = client.CreateLike(content.Content.ID, testProfile.Profile)
+	err = client.CreateLike(ctx, content.Content.ID, testProfile.Profile)
 	if err != nil {
 		t.Fatalf("CreateLike failed: %v", err)
 	}
 
 	// Verify like count increased to 1
-	contentAfterLike, err := client.GetContentByID(content.Content.ID)
+	contentAfterLike, err := client.GetContentByID(ctx, content.Content.ID)
 	if err != nil {
 		t.Fatalf("GetContentByID failed: %v", err)
 	}
@@ -282,13 +325,13 @@ func TestLikeOperations(t *testing.T) {
 	}
 
 	// Test DeleteLike
-	err = client.DeleteLike(content.Content.ID, testProfile.Profile)
+	err = client.DeleteLike(ctx, content.Content.ID, testProfile.Profile)
 	if err != nil {
 		t.Fatalf("DeleteLike failed: %v", err)
 	}
 
 	// Verify like count back to 0
-	contentAfterDelete, err := client.GetContentByID(content.Content.ID)
+	contentAfterDelete, err := client.GetContentByID(ctx, content.Content.ID)
 	if err != nil {
 		t.Fatalf("GetContentByID failed: %v", err)
 	}
@@ -298,8 +341,10 @@ func TestLikeOperations(t *testing.T) {
 }
 
 func TestFollowerOperations(t *testing.T) {
+	ctx := context.Background()
+
 	// Create followee profile
-	followee, err := client.FindOrCreateProfile(tapestry.FindOrCreateProfileParameters{
+	followee, err := client.FindOrCreateProfile(ctx, tapestry.FindOrCreateProfileParameters{
 		WalletAddress: solana.NewWallet().PublicKey().String(),
 		Username:      "followee_" + time.Now().Format("20060102150405"),
 	})
@@ -308,7 +353,7 @@ func TestFollowerOperations(t *testing.T) {
 	}
 
 	// Create two additional test profiles with random Solana addresses
-	follower1, err := client.FindOrCreateProfile(tapestry.FindOrCreateProfileParameters{
+	follower1, err := client.FindOrCreateProfile(ctx, tapestry.FindOrCreateProfileParameters{
 		WalletAddress: solana.NewWallet().PublicKey().String(),
 		Username:      "follower1_" + time.Now().Format("20060102150405"),
 	})
@@ -316,7 +361,7 @@ func TestFollowerOperations(t *testing.T) {
 		t.Fatalf("Failed to create follower1: %v", err)
 	}
 
-	follower2, err := client.FindOrCreateProfile(tapestry.FindOrCreateProfileParameters{
+	follower2, err := client.FindOrCreateProfile(ctx, tapestry.FindOrCreateProfileParameters{
 		WalletAddress: solana.NewWallet().PublicKey().String(),
 		Username:      "follower2_" + time.Now().Format("20060102150405"),
 	})
@@ -325,24 +370,24 @@ func TestFollowerOperations(t *testing.T) {
 	}
 
 	// Add followers to followee profile
-	err = client.AddFollower(follower1.Profile.ID, followee.Profile.ID)
+	err = client.AddFollower(ctx, follower1.Profile.ID, followee.Profile.ID)
 	if err != nil {
 		t.Fatalf("Failed to add follower1: %v", err)
 	}
 
-	err = client.AddFollower(follower2.Profile.ID, followee.Profile.ID)
+	err = client.AddFollower(ctx, follower2.Profile.ID, followee.Profile.ID)
 	if err != nil {
 		t.Fatalf("Failed to add follower2: %v", err)
 	}
 
 	// Also make follower1 follow follower2
-	err = client.AddFollower(follower1.Profile.ID, follower2.Profile.ID)
+	err = client.AddFollower(ctx, follower1.Profile.ID, follower2.Profile.ID)
 	if err != nil {
 		t.Fatalf("Failed to make follower1 follow follower2: %v", err)
 	}
 
 	// Verify followers of followee profile
-	followers, err := client.GetFollowers(followee.Profile.ID)
+	followers, err := client.GetFollowers(ctx, followee.Profile.ID)
 	if err != nil {
 		t.Fatalf("GetFollowers failed: %v", err)
 	}
@@ -351,7 +396,7 @@ func TestFollowerOperations(t *testing.T) {
 	}
 
 	// Verify following for follower1
-	following, err := client.GetFollowing(follower1.Profile.ID)
+	following, err := client.GetFollowing(ctx, follower1.Profile.ID)
 	if err != nil {
 		t.Fatalf("GetFollowing failed: %v", err)
 	}
@@ -360,13 +405,13 @@ func TestFollowerOperations(t *testing.T) {
 	}
 
 	// Remove one follower and verify
-	err = client.RemoveFollower(follower1.Profile.ID, followee.Profile.ID)
+	err = client.RemoveFollower(ctx, follower1.Profile.ID, followee.Profile.ID)
 	if err != nil {
 		t.Fatalf("RemoveFollower failed: %v", err)
 	}
 
 	// Verify updated follower count
-	updatedFollowers, err := client.GetFollowers(followee.Profile.ID)
+	updatedFollowers, err := client.GetFollowers(ctx, followee.Profile.ID)
 	if err != nil {
 		t.Fatalf("GetFollowers after removal failed: %v", err)
 	}
@@ -375,7 +420,7 @@ func TestFollowerOperations(t *testing.T) {
 	}
 
 	// Verify updated following count for follower1
-	updatedFollowing, err := client.GetFollowing(follower1.Profile.ID)
+	updatedFollowing, err := client.GetFollowing(ctx, follower1.Profile.ID)
 	if err != nil {
 		t.Fatalf("GetFollowing after removal failed: %v", err)
 	}
@@ -384,7 +429,7 @@ func TestFollowerOperations(t *testing.T) {
 	}
 
 	// Test GetFollowingWhoFollow
-	_, err = client.GetFollowingWhoFollow(follower2.Profile.ID, follower1.Profile.ID)
+	_, err = client.GetFollowingWhoFollow(ctx, follower2.Profile.ID, follower1.Profile.ID)
 	if err != nil {
 		t.Fatalf("GetFollowingWhoFollow failed: %v", err)
 	}
@@ -392,7 +437,7 @@ func TestFollowerOperations(t *testing.T) {
 	// TODO: assert output
 
 	// Test GetSuggestedProfiles
-	_, err = client.GetSuggestedProfiles(follower1.WalletAddress, true)
+	_, err = client.GetSuggestedProfiles(ctx, follower1.WalletAddress, true)
 	if err != nil {
 		t.Fatalf("GetSuggestedProfiles failed: %v", err)
 	}

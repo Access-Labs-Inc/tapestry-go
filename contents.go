@@ -62,6 +62,19 @@ type GetContentsResponse struct {
 	PageSize int               `json:"pageSize"`
 }
 
+type BatchResponseContentListItem struct {
+	Content      Content      `json:"content"`
+	SocialCounts SocialCounts `json:"socialCounts"`
+}
+
+type GetContentsByBatchIDsResponse struct {
+	Successful []BatchResponseContentListItem `json:"successful"`
+	Failed     []struct {
+		ID    string `json:"id"`
+		Error string `json:"error"`
+	} `json:"failed"`
+}
+
 type SocialCounts struct {
 	LikeCount    int `json:"likeCount"`
 	CommentCount int `json:"commentCount"`
@@ -192,6 +205,38 @@ func (c *TapestryClient) GetContentByID(ctx context.Context, contentId string) (
 	}
 
 	return &contentResp, nil
+}
+
+func (c *TapestryClient) GetContentsByBatchIDs(ctx context.Context, batchIDs []string) (*GetContentsByBatchIDsResponse, error) {
+	url := fmt.Sprintf("%s/contents/batch/read?apiKey=%s", c.tapestryApiBaseUrl, c.apiKey)
+
+	jsonBody, err := json.Marshal(batchIDs)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(string(jsonBody)))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var batchResp GetContentsByBatchIDsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&batchResp); err != nil {
+		return nil, fmt.Errorf("error decoding response: %w", err)
+	}
+
+	return &batchResp, nil
 }
 
 func (c *TapestryClient) GetContents(ctx context.Context, opts ...GetContentsOption) (*GetContentsResponse, error) {
