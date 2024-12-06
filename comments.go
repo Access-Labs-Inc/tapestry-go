@@ -42,9 +42,11 @@ type GetCommentsResponse struct {
 
 type CommentData struct {
 	Comment                     Comment                `json:"comment"`
+	ContentID                   string                 `json:"contentId"`
 	Author                      Author                 `json:"author"`
 	SocialCounts                SocialCounts           `json:"socialCounts"`
 	RequestingProfileSocialInfo map[string]interface{} `json:"requestingProfileSocialInfo"`
+	RecentReplies               []CommentData          `json:"recentReplies,omitempty"`
 }
 
 type Comment struct {
@@ -77,6 +79,12 @@ type UpdateCommentRequest struct {
 
 type UpdateCommentResponse struct {
 	Comment
+}
+
+type GetCommentRepliesOptions struct {
+	RequestingProfileID string
+	Page                int
+	PageSize            int
 }
 
 func (c *TapestryClient) CreateComment(ctx context.Context, options CreateCommentOptions) (*CreateCommentResponse, error) {
@@ -263,4 +271,51 @@ func (c *TapestryClient) UpdateComment(ctx context.Context, commentID string, pr
 	}
 
 	return &commentResp, nil
+}
+
+func (c *TapestryClient) GetCommentReplies(ctx context.Context, commentID string, options GetCommentRepliesOptions) (*GetCommentsResponse, error) {
+	baseURL := fmt.Sprintf("%s/comments/%s/replies?apiKey=%s", c.tapestryApiBaseUrl, commentID, c.apiKey)
+
+	params := url.Values{}
+	if options.RequestingProfileID != "" {
+		params.Add("requestingProfileId", options.RequestingProfileID)
+	}
+	if options.Page > 0 {
+		params.Add("page", strconv.Itoa(options.Page))
+	}
+	if options.PageSize > 0 {
+		params.Add("pageSize", strconv.Itoa(options.PageSize))
+	}
+
+	uri := baseURL
+	if len(params) > 0 {
+		uri += "&" + params.Encode()
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, nil
+		}
+		// Read error response body
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	var replies GetCommentsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&replies); err != nil {
+		return nil, fmt.Errorf("error decoding response: %w", err)
+	}
+
+	return &replies, nil
 }
