@@ -162,7 +162,6 @@ func TestContentOperations(t *testing.T) {
 func TestCommentOperations(t *testing.T) {
 	ctx := context.Background()
 
-	// Create test content first
 	contentProps := []tapestry.ContentProperty{
 		{Key: "title", Value: "Test Content for Comments"},
 	}
@@ -193,6 +192,62 @@ func TestCommentOperations(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("CreateComment failed: %v", err)
+	}
+
+	// Test replying to a comment
+	replyComment1, err := client.CreateComment(ctx, tapestry.CreateCommentOptions{
+		ContentID: content.Content.ID,
+		ProfileID: testProfile.Profile.ID,
+		Text:      "Reply to test comment 1",
+		CommentID: comment.Comment.ID,
+		Properties: []tapestry.CommentProperty{
+			{Key: "test", Value: "reply_property_1"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("CreateComment (reply) failed: %v", err)
+	}
+
+	// Test replying to a comment
+	replyComment2, err := client.CreateComment(ctx, tapestry.CreateCommentOptions{
+		ContentID: content.Content.ID,
+		ProfileID: testProfile.Profile.ID,
+		Text:      "Reply to test comment 2",
+		CommentID: comment.Comment.ID,
+		Properties: []tapestry.CommentProperty{
+			{Key: "test", Value: "reply_property_2"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("CreateComment (reply) failed: %v", err)
+	}
+
+	// Verify reply appears in GetComments with parent comment ID
+	replies, err := client.GetCommentReplies(ctx, comment.Comment.ID, tapestry.GetCommentRepliesOptions{
+		RequestingProfileID: testProfile.Profile.ID,
+		Page:                1,
+		PageSize:            10,
+	})
+	if err != nil {
+		t.Fatalf("GetComments for replies failed: %v", err)
+	}
+
+	if len(replies.Comments) != 2 {
+		t.Error("Expected exactly two replies")
+	}
+	if replies.Comments[1].Comment.ID != replyComment1.Comment.ID &&
+		replies.Comments[0].Comment.ID != replyComment2.Comment.ID {
+		t.Error("Reply comment ID mismatch")
+	}
+
+	// Clean up replies before deleting parent
+	err = client.DeleteComment(ctx, replyComment1.Comment.ID)
+	if err != nil {
+		t.Fatalf("DeleteComment (reply) failed: %v", err)
+	}
+	err = client.DeleteComment(ctx, replyComment2.Comment.ID)
+	if err != nil {
+		t.Fatalf("DeleteComment (reply) failed: %v", err)
 	}
 
 	// Test UpdateComment
