@@ -20,12 +20,19 @@ type ProfileResponse struct {
 	WalletAddress string  `json:"walletAddress"`
 }
 
+type ProfileProperty struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
 type FindOrCreateProfileParameters struct {
-	WalletAddress string `json:"walletAddress"`
-	Username      string `json:"username"`
-	Bio           string `json:"bio,omitempty"`
-	Image         string `json:"image,omitempty"`
-	ID            string `json:"id,omitempty"`
+	WalletAddress string            `json:"walletAddress"`
+	Username      string            `json:"username"`
+	Bio           string            `json:"bio,omitempty"`
+	Image         string            `json:"image,omitempty"`
+	ID            string            `json:"id,omitempty"`
+	PhoneNumber   string            `json:"phoneNumber,omitempty"`
+	Properties    []ProfileProperty `json:"properties,omitempty"`
 }
 
 type FindOrCreateProfileRequest struct {
